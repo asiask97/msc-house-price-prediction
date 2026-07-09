@@ -152,6 +152,7 @@ Run in this order:
 python loading_data.py          # once only — loads and saves EPC as parquet
 python joining_epc_and_lr.py    # matches LR sales to EPC records
 python add_exact_coordinates.py # adds postcode geo-location or exact when possible
+python add_school_distances.py  # adds distances to primary and secondary schools
 ```
 
 ### `loading_data.py`
@@ -160,27 +161,32 @@ Loads all EPC CSVs, filters to postcodes in the Land Registry, and saves as `Dat
 ### `joining_epc_and_lr.py`
 Matches each Land Registry sale to its closest EPC before the sale date using postcode + normalised address. Outputs `Data/lr_epc_matched.parquet` — one row per sale with EPC columns appended. Unmatched sales are included with `NaN` in EPC columns.
 
+```
 **Match results:** 
 --- Results ---
 Total LR sales:       5,890,089
 Matched to EPC:       4,379,248 (74.3%)
 Unmatched:            1,510,841 (25.7%)
+```
 
 ### `add_exact_coordinates.py`
 Enriches the matched dataset with precise per-property coordinates from OpenUPRN, where a UPRN is available in the EPC data. Falls back to postcode centroid from ONS Postcode Directory where no UPRN exists. Adds `exact_lat`, `exact_lon` and `has_exact_coords` columns. Outputs `Data/lr_epc_coords.parquet`.
 
+```
 **Match results:** 
 --- Results ---
 Total records:              5,890,089
 Exact coords (OpenUPRN):    4,371,593 (74.2%)
 Centroid only (ONSPD):      1,495,460
 No coordinates at all:      23,036
+```
 
 ---
 
 ### `add_school_distances.py`
 Calculates distance to nearest primary and nearest secondary school for each property. School locations come from two sources: GIAS for England and DataMapWales for Wales. Both use British National Grid coordinates which are converted to lat/long before distance calculation. Uses BallTree for efficient nearest-neighbour lookup across ~5.9M properties. Outputs `Data/lr_epc_schools.parquet`.
 
+```
 **Match results:**
 --- Distance Summary ---
 Primary: mean=0.57km, median=0.45km, max=51.13km
@@ -188,6 +194,7 @@ Secondary: mean=1.73km, median=1.13km, max=53.47km
 --- Joined amounts ---
 Primary schools:   17,866
 Secondary schools: 3,339
+```
 
 ---
 
