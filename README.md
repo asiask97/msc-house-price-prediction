@@ -153,6 +153,8 @@ python loading_data.py          # once only — loads and saves EPC as parquet
 python joining_epc_and_lr.py    # matches LR sales to EPC records
 python add_exact_coordinates.py # adds postcode geo-location or exact when possible
 python add_school_distances.py  # adds distances to primary and secondary schools
+python add_station_distances.py # adds transport stops
+python add_coast_distance.py    # adds distance from the coast
 ```
 
 ### `loading_data.py`
@@ -187,7 +189,6 @@ No coordinates at all:      23,036
 Calculates distance to nearest primary and nearest secondary school for each property. School locations come from two sources: GIAS for England and DataMapWales for Wales. Both use British National Grid coordinates which are converted to lat/long before distance calculation. Uses BallTree for efficient nearest-neighbour lookup across ~5.9M properties. Outputs `Data/lr_epc_schools.parquet`.
 
 ```
-**Match results:**
 --- Distance Summary ---
 Primary: mean=0.57km, median=0.45km, max=51.13km
 Secondary: mean=1.73km, median=1.13km, max=53.47km
@@ -196,7 +197,70 @@ Primary schools:   17,866
 Secondary schools: 3,339
 ```
 
----
+
+### `add_station_distances.py`
+Calculates distance to nearest transport stop and density counts for each property, split by transport type (rail, metro, bus, airport). Uses BallTree for nearest-neighbour lookup across ~5.9M properties. Outputs `Outputs/lr_epc_stations.parquet`.
+
+``` 
+  Total stops: 435,042
+  Rail stations:  2,635
+  Metro stations: 943
+  Bus stops:      202,053
+  Airports:       36
+
+--- Distance Summary (km) ---
+  Rail    : mean=2.96, median=1.76, max=63.27
+  Metro   : mean=18.81, median=15.52, max=129.87
+  Bus     : mean=0.97, median=0.15, max=57.36
+  Airport : mean=38.99, median=36.75, max=174.73
+
+--- Count Summary ---
+  Rail <1km   : mean=0.36, max=7
+  Rail <5km   : mean=5.30, max=56
+  Metro <1km  : mean=0.23, max=13
+  Bus <1km    : mean=23.45, max=154
+
+```
+
+
+### `add_coast_distance.py`
+Creates points every 500m along the coastline which then are converted to lat/long, and calculates distance to nearest coastal point for each property. Outputs `Outputs/lr_epc_coast.parquet`.
+
+
+```
+--- Coastline Distance Summary ---
+  Mean:   21.14 km
+  Median: 12.80 km
+  Max:    90.67 km
+  < 5km:  2,037,722 (34.6%)
+  < 20km: 3,494,370 (59.3%)
+```
+
+### `add_town_distance.py`
+Calculates distance to nearest major town or city for each property. Also stores the name of the nearest town. Outputs `Outputs/lr_epc_towns.parquet`.
+
+```
+--- Town Distance Summary ---
+  Mean:   13.41 km
+  Median: 9.30 km
+  Max:    166.15 km
+  < 5km:  1,805,742 (30.7%)
+  < 20km: 4,636,543 (78.7%)
+
+--- Most Common Nearest Towns ---
+nearest_town
+London        548388
+Plymouth      110813
+Norwich       105563
+Exeter        102112
+Basildon       91958
+Cardiff        91422
+Bristol        88812
+Harlow         87411
+Nottingham     85215
+Birkenhead     85166
+```
+
 
 ## Spital Features
 
@@ -401,11 +465,122 @@ Fields used: `school_name`, `sector`, `geom`
 
 ---
 
+### Transport Stops
+Source - https://beta-naptan.dft.gov.uk/download
+
+Fields used: CommonName, StopType, Status, NptgLocalityCode, Latitude, Longitude
+
+**Fields added produced:** `dist_rail_km`, `rail_within_1km`, `rail_within_5km`, `dist_metro_km`, `metro_within_1km`, `dist_bus_km`, `bus_within_1km`, `dist_airport_km`. ---- Bus features may be dropped if they show nothing meaningful
+
+<details>
+<summary>All NaPTAN Fields</summary>
+
+| # | Field | Description |
+|---|-------|-------------|
+| 1 | ATCOCode | Unique stop identifier |
+| 2 | NaptanCode | Short code for the stop |
+| 3 | PlateCode | |
+| 4 | CleardownCode | |
+| 5 | CommonName | Name of the stop/station |
+| 6 | CommonNameLang | Language of CommonName |
+| 7 | ShortCommonName | Abbreviated name |
+| 8 | ShortCommonNameLang | |
+| 9 | Landmark | Nearby landmark |
+| 10 | LandmarkLang | |
+| 11 | Street | Street name |
+| 12 | StreetLang | |
+| 13 | Crossing | Nearest crossing |
+| 14 | CrossingLang | |
+| 15 | Indicator | Stop indicator (e.g. platform, stand) |
+| 16 | IndicatorLang | |
+| 17 | Bearing | Direction the stop faces |
+| 18 | NptgLocalityCode | Locality code for deduplication |
+| 19 | LocalityName | Name of the locality |
+| 20 | ParentLocalityName | |
+| 21 | GrandParentLocalityName | |
+| 22 | Town | |
+| 23 | TownLang | |
+| 24 | Suburb | |
+| 25 | SuburbLang | |
+| 26 | LocalityCentre | Whether stop is in the locality centre |
+| 27 | GridType | Coordinate grid type (UKOS) |
+| 28 | Easting | British National Grid easting |
+| 29 | Northing | British National Grid northing |
+| 30 | Longitude | WGS84 longitude |
+| 31 | Latitude | WGS84 latitude |
+| 32 | StopType | Type of stop (RLY, MET, BCT, AIR, etc.) |
+| 33 | BusStopType | Sub-type for bus stops |
+| 34 | TimingStatus | |
+| 35 | DefaultWaitTime | |
+| 36 | Notes | |
+| 37 | NotesLang | |
+| 38 | AdministrativeAreaCode | |
+| 39 | CreationDateTime | When the record was created |
+| 40 | ModificationDateTime | Last modified |
+| 41 | RevisionNumber | |
+| 42 | Modification | |
+| 43 | Status | active, inactive, deleted |
+ 
+</details>
+
+---
+
+### Coastline
+
+High Water line from Boundary-Line database. Provided the Mean High Water mark or the average level the sea reaches at high tide which is measured over many years. It contains the entire coast of Great Britain (England, Scotland and Wales).
+
+Coast line is converted into set of points every 500m for easier estimation. BallTree then finds the nearest coastal point for each property.
+
+**Fields added:**
+ 
+| Field | Description |
+|-------|-------------|
+| dist_coast_km | Distance to nearest coastline point (km) |
+
+---
+
+### Major Towns and Cities
+
+Source: https://geoportal.statistics.gov.uk/datasets 980da620a0264647bd679642f96b42c1_0/explore
+
+Major Towns and Cities 2015 dataset has 112 towns/cites in England and Wales with a population above 75,000 ( from 2011 Census ). Coordinates are centroids of each town boundary, all already in WGS84 lat/long.
+
+> **Note:** Only 112 towns are included due to the 75k population threshold. Smaller towns and villages are not included, so if we want rural areas to be represented, a way of capturing smaller towns is needed.
+
+Fields used: `TCITY15NM`, `LAT`, `LONG`
+
+<details>
+<summary>All Major Towns and Cities Fields</summary>
+
+| # | Field | Description |
+|---|-------|-------------|
+| 1 | OBJECTID | Row identifier |
+| 2 | TCITY15CD | Town/city code |
+| 3 | TCITY15NM | Town/city name |
+| 4 | BNG_E | British National Grid easting |
+| 5 | BNG_N | British National Grid northing |
+| 6 | LONG | WGS84 longitude |
+| 7 | LAT | WGS84 latitude |
+| 8 | Shape__Area | Boundary area (sq meters) |
+| 9 | Shape__Length | Boundary perimeter (meters) |
+| 10 | GlobalID | Unique identifier |
+ 
+</details>
+
+**Fields added:**
+ 
+| Field | Description |
+|-------|-------------|
+| dist_town_km | Distance to nearest major town/city (km) |
+| nearest_town | Name of the nearest town/city |
+
+---
+
 ## Limitations 
 
 - Scotland is excluded because property transactions are managed by Registers of Scotland, a separate system from HM Land Registry, with a different data format and access process. Integrating both systems would be much more challenging.
 
-
+- For towns and cities distances Im only using 112 places which are included in the dataset I downloaded.(75k+ population threshold in 2015) This can be improved to any smaller towns if I want to but as of now, distances to one of 112 large towns and cities is enough.
 ---
 
 ## Any Extra Notes 
