@@ -41,7 +41,7 @@ print(f"Loaded {len(df_uprn):,} UPRN records")
 print("\nLoading ONS Postcode Directory...")
 postcodes = pd.read_csv(
     "Data/Online_ONS_Postcode_Directory_Live.csv",
-    usecols=["PCDS", "LAT", "LONG"]
+    usecols=["PCDS", "LAT", "LONG", "IMD20IND"]
 )
 postcodes["PCDS"] = postcodes["PCDS"].str.strip().str.upper()
 print(f"Loaded {len(postcodes):,} postcode records")
