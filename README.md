@@ -155,6 +155,7 @@ python add_exact_coordinates.py # adds postcode geo-location or exact when possi
 python add_school_distances.py  # adds distances to primary and secondary schools
 python add_station_distances.py # adds transport stops
 python add_coast_distance.py    # adds distance from the coast
+python add_town_distance.py     # adds distances to nearest large town/city
 ```
 
 ### `loading_data.py`
