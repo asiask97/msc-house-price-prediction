@@ -51,13 +51,13 @@ optuna.logging.set_verbosity(optuna.logging.WARNING)
 # =============================================================================
 CONFIG = {
     "input": "Outputs/clean_property_data.parquet",
-    "full_rows": 2_000_000,      # rows used to refit the final winners
-    "tune_rows": 500_000,        # rows used for the Optuna search (the speed lever)
+    "full_rows": 3_000_000,      # rows used to refit the final winners
+    "tune_rows": 300_000,        # rows used for the Optuna search
     "test_size": 0.2,
     "random_state": 42,
-    "cv_folds": 3,               # 3 is plenty for tuning; 5 wastes time here
+    "cv_folds": 3,               # fold 
     "n_trials": 150,              # Optuna trials per model
-    "scoring": "MAPE",           # the objective Optuna minimises (logged per run)
+    "scoring": "MAPE",           # the objective Optuna minimises - for logger
     "study_db": "Outputs/optuna_study.db",
     "results_db": "Outputs/experiments.db",
 }
@@ -78,7 +78,12 @@ numeric_features = [
     "exact_lat", "exact_lon", "dist_primary_km", "dist_secondary_km",
     "dist_rail_km", "rail_within_1km", "rail_within_5km", "dist_metro_km",
     "metro_within_1km", "dist_airport_km", "dist_coast_km", "dist_town_km",
-    "sale_time", "construction_year", "construction_year_exact", "property_age",
+    "sale_time", "construction_year", "construction_year_exact", "property_age", 
+    'area_past_price',
+    # comparables
+    "comp1_price", "comp1_floor_area", "comp1_distance_km", "comp1_days_ago",
+    "comp2_price", "comp2_floor_area", "comp2_distance_km", "comp2_days_ago",
+    "comp3_price", "comp3_floor_area", "comp3_distance_km", "comp3_days_ago",
 ]
 categorical_features = [
     "property_type_x", "new_build", "duration", "current_energy_rating",
@@ -206,7 +211,7 @@ def obj_xgb(trial):
 OBJECTIVES = {
     #"Ridge": obj_ridge,
     "XGBoost": obj_xgb,
-    "RandomForest": obj_rf,
+    #"RandomForest": obj_rf,
     "LightGBM": obj_lgbm,
 }
 

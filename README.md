@@ -149,13 +149,14 @@ Source: https://osdatahub.os.uk/downloads/open/OpenUPRN
 Run in this order:
 
 ```bash
-python loading_data.py          # once only — loads and saves EPC as parquet
-python joining_epc_and_lr.py    # matches LR sales to EPC records
-python add_exact_coordinates.py # adds postcode geo-location or exact when possible
-python add_school_distances.py  # adds distances to primary and secondary schools
-python add_station_distances.py # adds transport stops
-python add_coast_distance.py    # adds distance from the coast
-python add_town_distance.py     # adds distances to nearest large town/city
+python loading_data.py              # once only — loads and saves EPC as parquet
+python joining_epc_and_lr.py        # matches LR sales to EPC records
+python add_exact_coordinates.py     # adds postcode geo-location or exact when possible
+python add_comparison_properties.py # adds past property sales as comparison features 
+python add_school_distances.py      # adds distances to primary and secondary schools
+python add_station_distances.py     # adds transport stops
+python add_coast_distance.py        # adds distance from the coast
+python add_town_distance.py         # adds distances to nearest large town/city
 ```
 
 ### `loading_data.py`
@@ -185,6 +186,27 @@ No coordinates at all:      23,036
 ```
 
 ---
+
+### `add_comparison_properties.py`
+Adds up to 3 nearest prior comparable sales to each property, using exact coordinates only. For each 2020+ sale it finds the geographically nearest earlier sales within the previous 12 months, taken from a strictly day earlier so no future information leaks in. 2019 sales are kept as comparables but excluded from the output; properties without exact coordinates stay in but receive none. Adds `comp1..3_price`, `comp1..3_floor_area`, `comp1..3_distance_km`, `comp1..3_days_ago`, plus `n_comparables` and `has_comparables`. Outputs `Outputs/lr_epc_comparables.parquet`.
+
+```
+Output rows: 5,890,089
+Rows with no comparables: 1,518,863 / 5,890,089 (25.79%)
+
+Comparable count distribution:
+n_comparables
+0    1518863
+1        108
+2         75
+3    4371043
+Name: count, dtype: int64
+
+Leakage check - comparables dated on/after target sale: 0 PASS
+```
+
+---
+
 
 ### `add_school_distances.py`
 Calculates distance to nearest primary and nearest secondary school for each property. School locations come from two sources: GIAS for England and DataMapWales for Wales. Both use British National Grid coordinates which are converted to lat/long before distance calculation. Uses BallTree for efficient nearest-neighbour lookup across ~5.9M properties. Outputs `Data/lr_epc_schools.parquet`.

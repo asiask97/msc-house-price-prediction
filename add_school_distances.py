@@ -110,7 +110,7 @@ print(f"  Secondary schools: {len(secondary):,}")
 # =============================================================================
 
 print("\nLoading property dataset...")
-df = pd.read_parquet("Outputs/lr_epc_coords.parquet")
+df = pd.read_parquet("Outputs/lr_epc_comparables.parquet")
 print(f"  Records: {len(df):,}")
 
 # Use exact coords where available, fall back to postcode centroid
