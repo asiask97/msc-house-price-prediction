@@ -32,7 +32,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.impute import SimpleImputer
-from sklearn.linear_model import Ridge
+from sklearn.linear_model import Ridge, Lasso
 from sklearn.ensemble import RandomForestRegressor
 from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor, early_stopping
@@ -41,10 +41,20 @@ from sklearn.metrics import (
     mean_squared_error, mean_absolute_error,
     mean_absolute_percentage_error, r2_score, make_scorer,
 )
-
+import argparse
 import warnings
 warnings.filterwarnings("ignore")
 optuna.logging.set_verbosity(optuna.logging.WARNING)
+
+
+# =============================================================================
+# ARGS
+# =============================================================================
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--features", choices=["base", "full"], default="full",
+                    help="base = property attributes only; full = everything")
+args = parser.parse_args()
 
 # =============================================================================
 # CONFIG
@@ -73,6 +83,19 @@ if CONFIG["full_rows"]:
 print(f"  Full: {len(df_full):,} rows")
 
 target = "price"
+
+# --- Base: No spatial features, just very basic features ---
+base_numeric = [
+    "total_floor_area", "current_energy_efficiency", "number_habitable_rooms",
+    "sale_time", "construction_year", "construction_year_exact", "property_age",
+]
+base_categorical = [
+    "property_type_x", "new_build", "duration", "current_energy_rating",
+    "tenure", "built_form", "construction_age_band", "main_fuel",
+]
+
+# --- Full: All features ---
+
 numeric_features = [
     "total_floor_area", "current_energy_efficiency", "number_habitable_rooms",
     "exact_lat", "exact_lon", "dist_primary_km", "dist_secondary_km",
@@ -89,6 +112,11 @@ categorical_features = [
     "property_type_x", "new_build", "duration", "current_energy_rating",
     "tenure", "built_form", "construction_age_band", "main_fuel",
 ]
+
+if args.features == "base":
+    numeric_features = base_numeric
+    categorical_features = base_categorical
+
 numeric_features = [f for f in numeric_features if f in df_full.columns]
 categorical_features = [f for f in categorical_features if f in df_full.columns]
 all_features = numeric_features + categorical_features
@@ -142,6 +170,12 @@ def cv_mape(estimator, X, y):
 def obj_ridge(trial):
     alpha = trial.suggest_float("alpha", 1.0, 1000, log=True)
     pipe = Pipeline([("pre", make_preprocessor()), ("reg", Ridge(alpha=alpha))])
+    return cv_mape(pipe, X_tune, y_tune)
+
+
+def obj_lasso(trial):
+    alpha = trial.suggest_float("alpha", 0.01, 10, log=True)
+    pipe = Pipeline([("pre", make_preprocessor()), ("reg", Lasso(alpha=alpha))])
     return cv_mape(pipe, X_tune, y_tune)
 
 
@@ -209,10 +243,11 @@ def obj_xgb(trial):
     return mean_absolute_percentage_error(np.expm1(yval), pred) * 100
 
 OBJECTIVES = {
-    #"Ridge": obj_ridge,
-    "XGBoost": obj_xgb,
+    "Ridge": obj_ridge,
+    "Lasso": obj_lasso,
+    #"XGBoost": obj_xgb,
     #"RandomForest": obj_rf,
-    "LightGBM": obj_lgbm,
+    #"LightGBM": obj_lgbm,
 }
 
 # =============================================================================
@@ -222,6 +257,8 @@ def build_final(name, best_params):
     """Return an unfitted pipeline for the winning params, ready to fit on full data."""
     if name == "Ridge":
         reg = Ridge(**best_params)
+    elif name == "Lasso":
+        reg = Lasso(**best_params)
     elif name == "RandomForest":
         reg = RandomForestRegressor(random_state=RS, n_jobs=-1, **best_params)
     elif name == "LightGBM":
@@ -309,7 +346,7 @@ for name, objective in OBJECTIVES.items():
         storage=f"sqlite:///{CONFIG['study_db']}",
         load_if_exists=True,
     )
-    n = 1 if name == "Ridge" else CONFIG["n_trials"]  # Ridge has 1 knob; don't waste trials
+    n = 30 if name in ("Ridge", "Lasso") else CONFIG["n_trials"]  # Ridge has 1 knob - don't waste trials
     t0 = time.time()
     study.optimize(objective, n_trials=n, show_progress_bar=True)
     tune_seconds = time.time() - t0
