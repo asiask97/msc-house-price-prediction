@@ -25,7 +25,7 @@ from sklearn.neighbors import BallTree
 # =============================================================================
 
 print("Loading transport stops data...")
-raw = pd.read_csv("Data/transport/stops.csv", low_memory=False)
+raw = pd.read_csv("./Data/transport/stops.csv", low_memory=False)
 print(f"  Total stops: {len(raw):,}")
 
 # Active only, must have coordinates
@@ -49,7 +49,7 @@ print(f"  Airports:       {len(airport):,}")
 # =============================================================================
 
 print("\nLoading property dataset...")
-df = pd.read_parquet("Outputs/lr_epc_schools.parquet")
+df = pd.read_parquet("./Outputs/lr_epc_schools.parquet")
 print(f"  Records: {len(df):,}")
 
 df["lat"] = df["exact_lat"].fillna(df["LAT"])
@@ -137,5 +137,5 @@ for col, label in [
 df = df.drop(columns=["lat", "lon"], errors="ignore")
 
 print("\nSaving...")
-df.to_parquet("Outputs/lr_epc_stations.parquet", compression="snappy")
-print("Done — saved to Outputs/lr_epc_stations.parquet")
+df.to_parquet("./Outputs/lr_epc_stations.parquet", compression="snappy")
+print("Done — saved to ./Outputs/lr_epc_stations.parquet")

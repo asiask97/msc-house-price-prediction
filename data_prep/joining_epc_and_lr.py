@@ -17,7 +17,7 @@ import re
 import pandas as pd
 from tqdm import tqdm
 
-lr_folder = Path("Data/LR")
+lr_folder = Path("./Data/LR")
 
 lr_columns = [
     "transaction_id", "price", "date", "postcode",
@@ -67,7 +67,7 @@ print(f"Loaded {len(df_lr):,} LR records")
 print(f"Unique postcodes in LR: {df_lr['postcode'].nunique():,}")
 
 print("\nLoading EPC...")
-df_epc = pd.read_parquet("Data/EPC/epc.parquet")
+df_epc = pd.read_parquet("./Data/EPC/epc.parquet")
 print(f"Loaded {len(df_epc):,} EPC records")
 print(f"Unique postcodes in EPC: {df_epc['postcode'].nunique():,}")
 
@@ -140,7 +140,7 @@ print(f"Unmatched:          {final['lodgement_date'].isna().sum():,} ({final['lo
 # =============================================================================
 
 print("\nSaving to parquet...")
-final.to_parquet("Outputs/lr_epc_matched.parquet", compression="snappy")
+final.to_parquet("./Outputs/lr_epc_matched.parquet", compression="snappy")
 print("Done")
 
 # =============================================================================
@@ -149,5 +149,5 @@ print("Done")
 
 print("\nSaving sample log...")
 sample = final[final["lodgement_date"].notna()].sample(n=5000, random_state=42)
-sample.to_csv("Outputs/sample_log.csv", index=False)
-print(f"Saved {len(sample):,} rows to Outputs/sample_log.csv")
+sample.to_csv("./Outputs/sample_log.csv", index=False)
+print(f"Saved {len(sample):,} rows to ./Outputs/sample_log.csv")

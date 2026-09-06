@@ -22,7 +22,7 @@ from sklearn.metrics import (
 import time, warnings
 warnings.filterwarnings("ignore")
 
-INPUT       = "Outputs/clean_property_data.parquet"
+INPUT       = "./Outputs/clean_property_data.parquet"
 FULL_ROWS   = 4_291_959
 TEST_SIZE   = 0.2
 RS          = 42

@@ -37,7 +37,7 @@ import matplotlib.pyplot as plt
 # =============================================================================
 
 print("Loading coastline shapefile...")
-coast = gpd.read_file("Data/coastline/Data/GB/high_water_polyline.shp")
+coast = gpd.read_file("./Data/coastline/Data/GB/high_water_polyline.shp")
 print(f"  Coastline segments: {len(coast):,}")
 
 # Sample points along the coastline every 500m
@@ -79,7 +79,7 @@ plt.show()
 # =============================================================================
 
 print("\nLoading property dataset...")
-df = pd.read_parquet("Outputs/lr_epc_stations.parquet")
+df = pd.read_parquet("./Outputs/lr_epc_stations.parquet")
 print(f"  Records: {len(df):,}")
 
 df["lat"] = df["exact_lat"].fillna(df["LAT"])
@@ -117,5 +117,5 @@ print(f"  < 20km: {(df[col] < 20).sum():,} ({(df[col] < 20).mean()*100:.1f}%)")
 df = df.drop(columns=["lat", "lon"], errors="ignore")
 
 print("\nSaving...")
-df.to_parquet("Outputs/lr_epc_coast.parquet", compression="snappy")
-print("Done — saved to Outputs/lr_epc_coast.parquet")
+df.to_parquet("./Outputs/lr_epc_coast.parquet", compression="snappy")
+print("Done — saved to ./Outputs/lr_epc_coast.parquet")

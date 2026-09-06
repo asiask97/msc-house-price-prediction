@@ -60,16 +60,16 @@ args = parser.parse_args()
 # CONFIG
 # =============================================================================
 CONFIG = {
-    "input": "Outputs/clean_property_data.parquet",
-    "full_rows": 3_000_000,      # rows used to refit the final winners
+    "input": "./Outputs/clean_property_data.parquet",
+    "full_rows": None,      # rows used to refit the final winners. None = all
     "tune_rows": 300_000,        # rows used for the Optuna search
     "test_size": 0.2,
     "random_state": 42,
-    "cv_folds": 3,               # fold 
+    "cv_folds": 5,                # fold 
     "n_trials": 150,              # Optuna trials per model
-    "scoring": "MAPE",           # the objective Optuna minimises - for logger
-    "study_db": "Outputs/optuna_study.db",
-    "results_db": "Outputs/experiments.db",
+    "scoring": "MAPE",            # the objective Optuna minimises - for logger
+    "study_db": "./Outputs/optuna_study.db",
+    "results_db": "./Outputs/experiments.db",
 }
 RS = CONFIG["random_state"]
 
@@ -123,7 +123,7 @@ all_features = numeric_features + categorical_features
 
 X_full = df_full[all_features]
 y_full = np.log1p(df_full[target])
-#y_full =df_full[target]
+
 # Tuning subsample (drawn from full)
 tune_idx = X_full.sample(n=min(CONFIG["tune_rows"], len(X_full)), random_state=RS).index
 X_tune, y_tune = X_full.loc[tune_idx], y_full.loc[tune_idx]
@@ -154,13 +154,12 @@ def _mape_pounds(y_true_log, y_pred_log):
 mape_scorer = make_scorer(_mape_pounds, greater_is_better=False)
 
 # MAPE as an sklearn scorer (higher = better -> negative MAPE)
-#mape_scorer = make_scorer(mean_absolute_percentage_error, greater_is_better=False)
 cv = KFold(n_splits=CONFIG["cv_folds"], shuffle=True, random_state=RS)
 
 
 def cv_mape(estimator, X, y):
     """Mean CV MAPE (%). Positive, lower is better."""
-    scores = cross_val_score(estimator, X, y, scoring=mape_scorer, cv=cv, n_jobs=-1)
+    scores = cross_val_score(estimator, X, y, scoring=mape_scorer, cv=cv, n_jobs=1)
     return -scores.mean() * 100
 
 
@@ -183,7 +182,7 @@ def obj_rf(trial):
     params = {
         "n_estimators": trial.suggest_int("n_estimators", 100, 400, step=50),
         "max_depth": trial.suggest_int("max_depth", 6, 30),
-        "min_samples_leaf": trial.suggest_int("min_samples_leaf", 1, 60),
+        "min_samples_leaf": trial.suggest_int("min_samples_leaf", 1, 10),
         "min_samples_split": trial.suggest_int("min_samples_split", 2, 40),
         "max_features": trial.suggest_float("max_features", 0.3, 1.0),
     }
@@ -196,7 +195,7 @@ def obj_lgbm(trial):
     params = {
         "n_estimators": 2000,
         "learning_rate": trial.suggest_float("learning_rate", 0.005, 0.2, log=True),
-        "max_depth": trial.suggest_int("max_depth", 4, 14),
+        "max_depth": trial.suggest_int("max_depth", 4, 18),
         "num_leaves": trial.suggest_int("num_leaves", 31, 255),
         "min_child_samples": trial.suggest_int("min_child_samples", 5, 300),
         "subsample": trial.suggest_float("subsample", 0.6, 1.0),
@@ -207,13 +206,9 @@ def obj_lgbm(trial):
     # Early stopping needs a validation split -> preprocess once, fit with callback.
     pre = make_preprocessor()
     Xt = pre.fit_transform(X_tune)
-    Xtr, Xval, ytr, yval = train_test_split(Xt, y_tune.to_numpy(),
-                                            test_size=0.2, random_state=RS)
+    Xtr, Xval, ytr, yval = train_test_split(Xt, y_tune.to_numpy(), test_size=0.2, random_state=RS)
     model = LGBMRegressor(random_state=RS, n_jobs=-1, verbose=-1, **params)
-    model.fit(Xtr, ytr, eval_set=[(Xval, yval)], eval_metric="mape",
-              callbacks=[early_stopping(50, verbose=False)])
-    #pred = model.predict(Xval)
-    #return mean_absolute_percentage_error(yval, pred) * 100
+    model.fit(Xtr, ytr, eval_set=[(Xval, yval)], eval_metric="mape", callbacks=[early_stopping(50, verbose=False)])
     pred = np.expm1(model.predict(Xval))
     return mean_absolute_percentage_error(np.expm1(yval), pred) * 100
 
@@ -222,32 +217,28 @@ def obj_xgb(trial):
     params = {
         "n_estimators": 2000,
         "learning_rate": trial.suggest_float("learning_rate", 0.005, 0.2, log=True),
-        "max_depth": trial.suggest_int("max_depth", 4, 12),
+        "max_depth": trial.suggest_int("max_depth", 4, 16),
         "min_child_weight": trial.suggest_int("min_child_weight", 1, 50),
         "subsample": trial.suggest_float("subsample", 0.6, 1.0),
         "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
         "reg_lambda": trial.suggest_float("reg_lambda", 1e-3, 100, log=True),
         "reg_alpha": trial.suggest_float("reg_alpha", 1e-3, 100, log=True),
-        "gamma": trial.suggest_float("gamma", 0, 5),
+        "gamma": trial.suggest_float("gamma", 0, 2),
     }
     pre = make_preprocessor()
     Xt = pre.fit_transform(X_tune)
-    Xtr, Xval, ytr, yval = train_test_split(Xt, y_tune.to_numpy(),
-                                            test_size=0.2, random_state=RS)
-    model = XGBRegressor(random_state=RS, n_jobs=-1, tree_method="hist",
-                         early_stopping_rounds=50, eval_metric="mape", **params)
+    Xtr, Xval, ytr, yval = train_test_split(Xt, y_tune.to_numpy(), test_size=0.2, random_state=RS)
+    model = XGBRegressor(random_state=RS, n_jobs=-1, tree_method="hist", early_stopping_rounds=50, eval_metric="mape", **params)
     model.fit(Xtr, ytr, eval_set=[(Xval, yval)], verbose=False)
-    #pred = model.predict(Xval)
-    #return mean_absolute_percentage_error(yval, pred) * 100
     pred = np.expm1(model.predict(Xval))
     return mean_absolute_percentage_error(np.expm1(yval), pred) * 100
 
 OBJECTIVES = {
-    "Ridge": obj_ridge,
-    "Lasso": obj_lasso,
+    #"Ridge": obj_ridge,
+    #"Lasso": obj_lasso,
     #"XGBoost": obj_xgb,
-    #"RandomForest": obj_rf,
     #"LightGBM": obj_lgbm,
+    "RandomForest": obj_rf,
 }
 
 # =============================================================================
@@ -269,7 +260,6 @@ def build_final(name, best_params):
 
 
 def full_metrics(pipe, Xtr, ytr, Xte, yte):
-    #pr_tr, pr_te = pipe.predict(Xtr), pipe.predict(Xte)
     pr_tr, pr_te = np.expm1(pipe.predict(Xtr)), np.expm1(pipe.predict(Xte))
     ytr, yte = np.expm1(ytr), np.expm1(yte)
     return {

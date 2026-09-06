@@ -27,8 +27,8 @@ from tqdm import tqdm
 # =============================================================================
 # CONFIG
 # =============================================================================
-INPUT = Path("Outputs/lr_epc_coords.parquet")
-OUTPUT = Path("Outputs/lr_epc_comparables.parquet")
+INPUT = Path("./Outputs/lr_epc_coords.parquet")
+OUTPUT = Path("./Outputs/lr_epc_comparables.parquet")
 FIRST_YEAR = 2020        # Rows from this year onwards appear in the final output.
 N_COMPARABLES = 3        # Number of nearest comparable properties to add.
 RECENCY_MONTHS = 12      # Maximum look-back period for comparable sales.

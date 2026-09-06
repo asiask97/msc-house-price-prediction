@@ -42,7 +42,7 @@ transformer = Transformer.from_crs("EPSG:27700", "EPSG:4326", always_xy=True)
 # =============================================================================
 
 print("Loading England schools (GIAS)...")
-eng = pd.read_csv("Data/schools/edubasealldata20260707.csv", encoding="latin-1", low_memory=False)
+eng = pd.read_csv("./Data/schools/edubasealldata20260707.csv", encoding="latin-1", low_memory=False)
 
 eng = eng[eng["EstablishmentStatus (name)"] == "Open"]
 eng = eng[eng["PhaseOfEducation (name)"].isin(["Primary", "Secondary"])]
@@ -68,7 +68,7 @@ eng_clean = pd.DataFrame({
 # =============================================================================
 
 print("\nLoading Wales schools (DataMapWales)...")
-wal = pd.read_csv("Data/schools/maintained_schools_wg.csv")
+wal = pd.read_csv("./Data/schools/maintained_schools_wg.csv")
 
 wal = wal[wal["sector"].isin(["Cynradd", "Uwchradd"])]
 no_coords_wal = wal[wal["geom"].isna()].shape[0]
@@ -110,7 +110,7 @@ print(f"  Secondary schools: {len(secondary):,}")
 # =============================================================================
 
 print("\nLoading property dataset...")
-df = pd.read_parquet("Outputs/lr_epc_comparables.parquet")
+df = pd.read_parquet("./Outputs/lr_epc_comparables.parquet")
 print(f"  Records: {len(df):,}")
 
 # Use exact coords where available, fall back to postcode centroid
@@ -152,5 +152,5 @@ for col, label in [("dist_primary_km", "Primary"), ("dist_secondary_km", "Second
 df = df.drop(columns=["lat", "lon"], errors="ignore")
 
 print("\nSaving...")
-df.to_parquet("Outputs/lr_epc_schools.parquet", compression="snappy")
-print("Done — saved to Outputs/lr_epc_schools.parquet")
+df.to_parquet("./Outputs/lr_epc_schools.parquet", compression="snappy")
+print("Done — saved to ./Outputs/lr_epc_schools.parquet")

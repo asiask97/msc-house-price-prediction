@@ -29,7 +29,7 @@ from sklearn.neighbors import BallTree
 # =============================================================================
  
 print("Loading Major Towns and Cities...")
-towns = pd.read_csv("Data/cities/Major_Towns_and_Cities_Dec_2015_Boundaries_V2_2022.csv")
+towns = pd.read_csv("./Data/cities/Major_Towns_and_Cities_Dec_2015_Boundaries_V2_2022.csv")
 towns = towns.dropna(subset=["LAT", "LONG"])
 print(f"  Towns: {len(towns):,}")
 print(f"  Examples: {towns['TCITY15NM'].head(5).tolist()}")
@@ -40,7 +40,7 @@ print(f"  Examples: {towns['TCITY15NM'].head(5).tolist()}")
 # =============================================================================
  
 print("\nLoading property dataset...")
-df = pd.read_parquet("Outputs/lr_epc_coast.parquet")
+df = pd.read_parquet("./Outputs/lr_epc_coast.parquet")
 print(f"  Records: {len(df):,}")
  
 df["lat"] = df["exact_lat"].fillna(df["LAT"])
@@ -82,6 +82,6 @@ print(df["nearest_town"].value_counts().head(10).to_string())
 df = df.drop(columns=["lat", "lon"], errors="ignore")
  
 print("\nSaving...")
-df.to_parquet("Outputs/lr_epc_towns.parquet", compression="snappy")
-print("Done — saved to Outputs/lr_epc_towns.parquet")
+df.to_parquet("./Outputs/lr_epc_towns.parquet", compression="snappy")
+print("Done — saved to ./Outputs/lr_epc_towns.parquet")
  

@@ -27,12 +27,12 @@ from tqdm import tqdm
 # =============================================================================
 
 print("Loading matched LR-EPC dataset...")
-df = pd.read_parquet("Outputs/lr_epc_matched.parquet")
+df = pd.read_parquet("./Outputs/lr_epc_matched.parquet")
 print(f"Loaded {len(df):,} records")
 
 print("\nLoading OpenUPRN...")
 df_uprn = pd.read_csv(
-    "Data/osopenuprn_202605.csv",
+    "./Data/osopenuprn_202605.csv",
     usecols=["UPRN", "LATITUDE", "LONGITUDE"]
 )
 df_uprn["UPRN"] = df_uprn["UPRN"].astype(str).str.strip()
@@ -40,7 +40,7 @@ print(f"Loaded {len(df_uprn):,} UPRN records")
 
 print("\nLoading ONS Postcode Directory...")
 postcodes = pd.read_csv(
-    "Data/Online_ONS_Postcode_Directory_Live.csv",
+    "./Data/Online_ONS_Postcode_Directory_Live.csv",
     usecols=["PCDS", "LAT", "LONG", "IMD20IND"]
 )
 postcodes["PCDS"] = postcodes["PCDS"].str.strip().str.upper()
@@ -106,5 +106,5 @@ print(f"No coordinates at all:      {(df['LAT'].isna() & df['exact_lat'].isna())
 # =============================================================================
 
 print("\nSaving to parquet...")
-df.to_parquet("Outputs/lr_epc_coords.parquet", compression="snappy")
-print("Done — saved to Outputs/lr_epc_coords.parquet")
+df.to_parquet("./Outputs/lr_epc_coords.parquet", compression="snappy")
+print("Done — saved to ./Outputs/lr_epc_coords.parquet")

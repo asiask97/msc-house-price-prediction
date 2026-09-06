@@ -18,8 +18,8 @@ from pathlib import Path
 import pandas as pd
 from tqdm import tqdm
 
-lr_folder = Path("Data/LR")
-epc_folder = Path("Data/EPC")
+lr_folder = Path("./Data/LR")
+epc_folder = Path("./Data/EPC")
 
 lr_columns = [
     "transaction_id", "price", "date", "postcode",
@@ -67,5 +67,5 @@ print(f"Loaded {len(df_epc):,} EPC records after filtering")
 
 # Save all records — joining script will pick closest EPC per sale
 print(f"Saving {len(df_epc):,} records to parquet...")
-df_epc.to_parquet("Data/EPC/epc.parquet", compression="snappy")
+df_epc.to_parquet("./Data/EPC/epc.parquet", compression="snappy")
 print("Done")
